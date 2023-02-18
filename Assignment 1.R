@@ -34,7 +34,19 @@ data.GSPC <- getSymbols("^GSPC",from="2010-12-31",to="2020-12-31",auto.assign=FA
 GSPC.ret <- Delt(data.GSPC$GSPC.Adjusted)
 names(GSPC.ret) <- paste("GSPC.ret")
 
-# 
+#Fundamental Data and Financial Ratios
+funddata.AAPL <- read.csv( "appl_fin_ratios.csv", header = TRUE)
+funddata.AAPL_new <- t(funddata.AAPL)
+funddata.AMZN <- read.csv( "amzn_fin_ratios.csv", header = TRUE)
+funddata.AMZN_new <- t(funddata.AMZN)
+funddata.TSLA <- read.csv( "tsla_fin_ratios.csv", header = TRUE)
+funddata.TSLA_new <- t(funddata.TSLA)
+
+#financial ratios
+finratio.AAPL <- funddata.AAPL_new[,c(2,22,47,30)]
+finratio.AMZN <- funddata.AMZN_new[,c(2,22,47,30)]
+finratio.TSLA <- funddata.TSLA_new[,c(2,22,47,30)]
+
 
 
 ################################################################################

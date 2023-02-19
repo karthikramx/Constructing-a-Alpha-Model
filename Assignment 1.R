@@ -1,3 +1,8 @@
+# Setting current working directory
+# Add your working directory here
+setwd("~/Desktop/Fintech-Constructing-a-Alpha-Model")
+
+
 
 ################################################################################
 #################################### Data ######################################
@@ -34,18 +39,71 @@ data.GSPC <- getSymbols("^GSPC",from="2010-12-31",to="2020-12-31",auto.assign=FA
 GSPC.ret <- Delt(data.GSPC$GSPC.Adjusted)
 names(GSPC.ret) <- paste("GSPC.ret")
 
-#Fundamental Data and Financial Ratios
-funddata.AAPL <- read.csv( "appl_fin_ratios.csv", header = TRUE)
+# main_df
+main_df = cbind(PORTFOLIO.ret,GSPC.ret)
+# adding the year column
+
+main_df = as.data.frame(main_df)
+main_df['Year'] = rownames(main_df)
+get_year <- function(x) strsplit(x,'-')[[1]][1]
+main_df['Year'] = apply(main_df['Year'],1,get_year)
+main_df <- na.omit(main_df)
+
+
+# Fundamental Data and Financial Ratios
+funddata.AAPL <- read.csv( "Data/FundamentalData/appl_fin_ratios.csv", header = TRUE)
 funddata.AAPL_new <- t(funddata.AAPL)
-funddata.AMZN <- read.csv( "amzn_fin_ratios.csv", header = TRUE)
+funddata.AMZN <- read.csv( "Data/FundamentalData/appl_fin_ratios.csv", header = TRUE)
 funddata.AMZN_new <- t(funddata.AMZN)
-funddata.TSLA <- read.csv( "tsla_fin_ratios.csv", header = TRUE)
+funddata.TSLA <- read.csv( "Data/FundamentalData/appl_fin_ratios.csv", header = TRUE)
 funddata.TSLA_new <- t(funddata.TSLA)
 
-#financial ratios
+# Financial ratios
 finratio.AAPL <- funddata.AAPL_new[,c(2,22,47,30)]
 finratio.AMZN <- funddata.AMZN_new[,c(2,22,47,30)]
 finratio.TSLA <- funddata.TSLA_new[,c(2,22,47,30)]
+
+# renaming columns and fixing the fundamental data
+# AAPL
+finratio.AAPL <- as.data.frame(finratio.AAPL)
+names(finratio.AAPL) <- finratio.AAPL[1,] 
+finratio.AAPL <- finratio.AAPL[-1,]
+removex <- function(x) strsplit(x,'X')[[1]][2]
+rownames(finratio.AAPL) <- apply(as.array(rownames(finratio.AAPL)),1,removex)
+colnames(finratio.AAPL) <- c('currentRatioAAPL',   'debtEquityRatioAAPL', 'priceEarningsRatioAAPL', 'inventoryTurnoverAAPL')
+finratio.AAPL['Year'] = rownames(finratio.AAPL)
+finratio.AAPL['Year'] = apply(finratio.AAPL['Year'],1,get_year)
+
+# AMZN
+finratio.AMZN <- as.data.frame(finratio.AMZN)
+names(finratio.AMZN) <- finratio.AMZN[1,]
+finratio.AMZN <- finratio.AMZN[-1,]
+removex <- function(x) strsplit(x,'X')[[1]][2]
+rownames(finratio.AMZN) <- apply(as.array(rownames(finratio.AMZN)),1,removex)
+colnames(finratio.AMZN) <- c('currentRatioAMZN',   'debtEquityRatioAMZN', 'priceEarningsRatioAMZN', 'inventoryTurnoverAMZN')
+finratio.AMZN['Year'] = as.array(rownames(finratio.AMZN))
+finratio.AMZN['Year'] = apply(finratio.AMZN['Year'],1,get_year)
+
+# TSLA
+finratio.TSLA <- as.data.frame(finratio.TSLA)
+names(finratio.TSLA) <- finratio.TSLA[1,]
+finratio.TSLA <- finratio.TSLA[-1,]
+removex <- function(x) strsplit(x,'X')[[1]][2]
+rownames(finratio.TSLA) <- apply(as.array(rownames(finratio.TSLA)),1,removex)
+colnames(finratio.TSLA) <- c('currentRatioTSLA',   'debtEquityRatioTSLA', 'priceEarningsRatioTSLA', 'inventoryTurnoverTSLA')
+finratio.TSLA['Year'] = as.array(rownames(finratio.TSLA))
+finratio.TSLA['Year'] = apply(finratio.TSLA['Year'],1,get_year)
+
+
+# merging all data frames
+df_merge <- merge(main_df, finratio.AAPL, by = "Year",all.x = TRUE)
+df_merge <- merge(df_merge, finratio.AMZN, by = "Year",all.x = TRUE)
+df_merge <- merge(df_merge, finratio.TSLA, by = "Year",all.x = TRUE)
+
+write.csv(df_merge, 'df.merge.csv')
+
+
+
 
 
 

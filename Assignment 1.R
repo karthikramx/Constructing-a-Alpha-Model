@@ -2,19 +2,26 @@
 # Add your working directory here
 setwd("~/Desktop/Fintech-Constructing-a-Alpha-Model")
 
+# Required libraries
+library("TTR");
+library(quantmod);
+
+
+
 
 
 ################################################################################
 #################################### Data ######################################
 ################################################################################
-# 1. Daily Stock Data   (done)
+# 1. Daily Stock Data           (done)
 # 2. Fundamental Data
 # 3. Sentiment Data
 # 4. Economic Data
-# 5. S&P500 index data  (done)
+# 5. S&P500 index data          (done)
+# 6. Technical indicator data 
 
 
-library(quantmod);
+
 # Storing daily OHLCV data of the stock portfolio
 data.AMZN <- getSymbols("AMZN",from="2010-12-31",to="2020-12-31",auto.assign=FALSE)
 data.AAPL <- getSymbols("AAPL",from="2010-12-31",to="2020-12-31",auto.assign=FALSE)
@@ -105,6 +112,17 @@ write.csv(df_merge, 'df.merge.csv')
 
 
 
+##### plots
+##### scatter plot between portfolio and sp500
+#apple_returns = as.vector(c(AAPL.logret$AAPL.Adjusted))
+#sp500_returns = as.vector(c(AAPL.logret$AAPL.Adjusted))
+
+# adding scatter plot
+#plot(apple_returns, sp500_returns, main="Scatterplot Example",
+#     xlab="SP500 returns ", ylab="APP returns ", pch=19)
+
+
+
 
 
 ################################################################################
@@ -136,9 +154,34 @@ write.csv(df_merge, 'df.merge.csv')
 # 2. Run lm.summary() and select the significant factors
 # 3. Drop factor which are not significant from the data frame
 
+# tentative code
+# what about panel data
+# portfolio_factor_analysis <-lm(FF.data$exret ~ RmxRf + SMB + HML, data=FF.data)
+
+
+
 # Execute the alpha model and report performance
 # 1. Implement a strategy? - what is the premise, what indicators / factors to consider
 # 2. Generate signals
 # 3. Take positions
 # 4. Calculate metrics : P&L, underwater plot, sharpe ratio, alpha, Beta, max drawdowns etc...  
 # 2. Open to suggestions on this one (ill check the lectures)
+
+# Performance ANalytics
+#port.ret <-WGT.2asset %*% mat.ret  
+library(PerformanceAnalytics)
+Return.annualized(returns$AMZN.ret)
+maxDrawdown(returns$AMZN.ret)
+#charts.PerformanceSummary(returns$AMZN.ret,methods="GaussianES")
+SharpeRatio.annualized(returns$AMZN.ret)
+#SharpeRatio(returns$AMZN.ret)
+VaR(returns$AMZN.ret, 0.05,method="gaussian")
+KellyRatio(returns$AMZN.ret)
+
+InformationRatio(returns$AMZN.ret,returns$IBM.ret,scale=252) #the 2nd argument is the benchmark
+chart.VaRSensitivity(returns$AMZN.ret) #chart includes VaR, ES
+chart.VaRSensitivity(returns$IBM.ret)
+charts.PerformanceSummary(returns$AMZN.ret)
+#charts.PerformanceSummary(returns$AMZN.ret,methods="GaussianES") #other methods GaussianVaR, HistoricalVaR
+
+

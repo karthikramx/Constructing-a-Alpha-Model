@@ -6,6 +6,10 @@ setwd("~/Desktop/Fintech-Constructing-a-Alpha-Model")
 library("TTR");
 library(quantmod);
 
+# common function
+get_year <- function(x) strsplit(x,'-')[[1]][1]
+get_year_month <- function(x) paste(strsplit(x,'-')[[1]][1],strsplit(x,'-')[[1]][2],sep='-')
+
 ################################################################################
 #################################### Data ######################################
 ################################################################################
@@ -17,9 +21,9 @@ library(quantmod);
 # 6. Technical indicator data 
 
 # Storing daily OHLCV data of the stock portfolio
-data.AMZN <- getSymbols("AMZN",from="2010-12-31",to="2020-12-31",auto.assign=FALSE)
-data.AAPL <- getSymbols("AAPL",from="2010-12-31",to="2020-12-31",auto.assign=FALSE)
-data.TSLA <- getSymbols("TSLA",from="2010-12-31",to="2020-12-31",auto.assign=FALSE)
+data.AMZN <- getSymbols("AMZN",from="2011-01-01",to="2021-12-31",auto.assign=FALSE)
+data.AAPL <- getSymbols("AAPL",from="2011-01-01",to="2021-12-31",auto.assign=FALSE)
+data.TSLA <- getSymbols("TSLA",from="2011-01-01",to="2021-12-31",auto.assign=FALSE)
 
 # Fundamental Data and Financial Ratios
 funddata.AAPL <- read.csv( "Data/FundamentalData/appl_fin_ratios.csv", header = TRUE)
@@ -30,11 +34,31 @@ funddata.TSLA <- read.csv( "Data/FundamentalData/appl_fin_ratios.csv", header = 
 funddata.TSLA_new <- t(funddata.TSLA)
 
 # Economic Data
+# Crude oil data
 oil.prices <- read.csv( "Data/EconomicData/crude-oil-prices.csv", header = TRUE)
 # removing un-necessary columns
 oil.prices = oil.prices[,-1]
 oil.prices = oil.prices[,-1]
 names(oil.prices) <- c('Year','Oil Price')
+
+# Unemployment rate dataset
+getSymbols("UNRATE",src = "FRED")
+unrate<-UNRATE["2011-01-01/2021-12-31"]
+unrate = as.data.frame(unrate)
+unrate['Year'] = rownames(unrate)
+unrate['Month'] = apply(unrate['Year'],1,get_year_month)
+
+
+################################################################################
+############################## Data Manipulation ###############################
+################################################################################
+
+# Data Manipulation and Organization
+# 1. Get log returns of all stocks in the portfolio
+# 2. Organize fundamental data , join data frames to match index (date)
+# 3. Perform sentiment analysis and merge sentiment scores in the dataframe
+# 4. Merge economic data
+# 5. Merge SP500 daily change percentage column (y)
 
 # Calculating daily returns % of each stock in the portfolio
 AMZN.ret <- Delt(data.AMZN$AMZN.Adjusted)
@@ -57,7 +81,7 @@ main_df_AAPL = cbind(AAPL.ret,GSPC.ret)
 main_df_AMZN = cbind(AMZN.ret,GSPC.ret)
 main_df_TSLA = cbind(TSLA.ret,GSPC.ret)
 
-# adding the year column
+# adding the year and month column
 main_df_AAPL = as.data.frame(main_df_AAPL)
 main_df_AMZN = as.data.frame(main_df_AMZN)
 main_df_TSLA = as.data.frame(main_df_TSLA)
@@ -67,10 +91,15 @@ main_df_TSLA <- na.omit(main_df_TSLA)
 main_df_AAPL['Year'] = rownames(main_df_AAPL)
 main_df_AMZN['Year'] = rownames(main_df_AMZN)
 main_df_TSLA['Year'] = rownames(main_df_TSLA)
-get_year <- function(x) strsplit(x,'-')[[1]][1]
 main_df_AAPL['Year'] = apply(main_df_AAPL['Year'],1,get_year)
 main_df_AMZN['Year'] = apply(main_df_AMZN['Year'],1,get_year)
 main_df_TSLA['Year'] = apply(main_df_TSLA['Year'],1,get_year)
+main_df_AAPL['Month'] = rownames(main_df_AAPL)
+main_df_AMZN['Month'] = rownames(main_df_AMZN)
+main_df_TSLA['Month'] = rownames(main_df_TSLA)
+main_df_AAPL['Month'] = apply(main_df_AAPL['Month'],1,get_year_month)
+main_df_AMZN['Month'] = apply(main_df_AMZN['Month'],1,get_year_month)
+main_df_TSLA['Month'] = apply(main_df_TSLA['Month'],1,get_year_month)
 
 # Financial ratios
 finratio.AAPL <- funddata.AAPL_new[,c(2,22,47,30)]
@@ -111,14 +140,36 @@ finratio.TSLA['Year'] = apply(finratio.TSLA['Year'],1,get_year)
 
 # merging all data frames
 # merging fundamental data
-df_merge_AAPL <- merge(main_df_AAPL, finratio.AAPL, by = "Year",all.x = TRUE)
+df_merge_AAPL <- merge(main_df_AAPL, finratio.AAPL, by = "Year")
 df_merge_AMZN <- merge(main_df_AMZN, finratio.AMZN, by = "Year",all.x = TRUE)
 df_merge_TSLA <- merge(main_df_TSLA, finratio.TSLA, by = "Year",all.x = TRUE)
 # merging economic data
 df_merge_AAPL <- merge(df_merge_AAPL,oil.prices, by = "Year",all.x = TRUE)
 df_merge_AMZN <- merge(df_merge_AMZN,oil.prices, by = "Year",all.x = TRUE)
 df_merge_TSLA <- merge(df_merge_TSLA,oil.prices, by = "Year",all.x = TRUE)
+# merging unemployment rate
+df_merge_AAPL <- merge(df_merge_AAPL,unrate, by = "Month",all.x = TRUE)
+df_merge_AMZN <- merge(df_merge_AMZN,unrate, by = "Month",all.x = TRUE)
+df_merge_TSLA <- merge(df_merge_TSLA,unrate, by = "Month",all.x = TRUE)
 
+
+# adding dates on index
+rownames(df_merge_AAPL) <- rownames(main_df_AAPL)
+rownames(df_merge_AMZN) <- rownames(main_df_AMZN)
+rownames(df_merge_TSLA) <- rownames(main_df_TSLA)
+
+
+# removing unnecessary columns
+df_merge_AAPL = head(within(df_merge_AAPL, rm("Year.x","Year.y","Month")))
+df_merge_AMZN = head(within(df_merge_AMZN, rm("Year.x","Year.y","Month")))
+df_merge_TSLA = head(within(df_merge_TSLA, rm("Year.x","Year.y","Month")))
+
+# clearing unwanted data
+rm("data.AAPL","data.GSPC","data.TSLA","finratio.AAPL","finratio.AMZN",
+   "finratio.TSLA","funddata.AAPL","funddata.AAPL_new","funddata.AMZN",
+   "funddata.AMZN_new","funddata.TSLA","funddata.TSLA_new","get_year",
+   "get_year_month","GSPC.ret","main_df_AAPL","main_df_AMZN","main_df_TSLA",      
+   "oil.prices","removex","TSLA.ret","unrate","UNRATE")
 
 write.csv(df_merge, 'df.merge.csv')
 
@@ -138,16 +189,7 @@ write.csv(df_merge, 'df.merge.csv')
 #index , stock.returns(y)* , (fun1, fun2, fun3, fun4)*, [year,eco1, eco2, eco3], (ta1, ta2, ta3), [sp500]*, (sentimentdata)
 #() - different
 #[] - same
-################################################################################
-############################## Data Manipulation ###############################
-################################################################################
 
-# Data Manipulation and Organization
-# 1. Get log returns of all stocks in the portfolio
-# 2. Organize fundamental data , join data frames to match index (date)
-# 3. Perform sentiment analysis and merge sentiment scores in the dataframe
-# 4. Merge economic data
-# 5. Merge SP500 daily change percentage column (y)
 
 
 ################################################################################

@@ -10,6 +10,9 @@ library(quantmod);
 get_year <- function(x) strsplit(x,'-')[[1]][1]
 get_year_month <- function(x) paste(strsplit(x,'-')[[1]][1],strsplit(x,'-')[[1]][2],sep='-')
 
+# Define date range for data 
+start.date <- "2011-01-01"; end.date <- "2021-12-31"
+
 ################################################################################
 #################################### Data ######################################
 ################################################################################
@@ -21,9 +24,9 @@ get_year_month <- function(x) paste(strsplit(x,'-')[[1]][1],strsplit(x,'-')[[1]]
 # 6. Technical indicator data 
 
 # Storing daily OHLCV data of the stock portfolio
-data.AMZN <- getSymbols("AMZN",from="2011-01-01",to="2021-12-31",auto.assign=FALSE)
-data.AAPL <- getSymbols("AAPL",from="2011-01-01",to="2021-12-31",auto.assign=FALSE)
-data.TSLA <- getSymbols("TSLA",from="2011-01-01",to="2021-12-31",auto.assign=FALSE)
+data.AMZN <- getSymbols("AMZN",from=start.date,to=end.date,auto.assign=FALSE)
+data.AAPL <- getSymbols("AAPL",from=start.date,to=end.date,auto.assign=FALSE)
+data.TSLA <- getSymbols("TSLA",from=start.date,to=end.date,auto.assign=FALSE)
 
 # Fundamental Data and Financial Ratios
 funddata.AAPL <- read.csv( "Data/FundamentalData/appl_fin_ratios.csv", header = TRUE)
@@ -45,8 +48,15 @@ names(oil.prices) <- c('Year','Oil Price')
 getSymbols("UNRATE",src = "FRED")
 unrate<-UNRATE["2011-01-01/2021-12-31"]
 unrate = as.data.frame(unrate)
-unrate['Year'] = rownames(unrate)
-unrate['Month'] = apply(unrate['Year'],1,get_year_month)
+unrate['Month'] = rownames(unrate)
+unrate['Month'] = apply(unrate['Month'],1,get_year_month)
+
+# GDP data
+GDP <- read.csv( "Data/EconomicData/GDP-Data.csv", header = TRUE)
+GDP['GDP_%Change'] <-  Delt(GDP$GDP)
+GDP['Year'] = apply(GDP['DATE'],1,get_year)
+GDP['Quarter'] = quarters(as.Date(GDP$DATE))
+GDP['Quarter'] = paste(GDP$Year,GDP$Quarter,sep="-")
 
 
 ################################################################################
@@ -81,7 +91,7 @@ main_df_AAPL = cbind(AAPL.ret,GSPC.ret)
 main_df_AMZN = cbind(AMZN.ret,GSPC.ret)
 main_df_TSLA = cbind(TSLA.ret,GSPC.ret)
 
-# adding the year and month column
+# adding the year month and quarter columns
 main_df_AAPL = as.data.frame(main_df_AAPL)
 main_df_AMZN = as.data.frame(main_df_AMZN)
 main_df_TSLA = as.data.frame(main_df_TSLA)
@@ -91,6 +101,9 @@ main_df_TSLA <- na.omit(main_df_TSLA)
 main_df_AAPL['Year'] = rownames(main_df_AAPL)
 main_df_AMZN['Year'] = rownames(main_df_AMZN)
 main_df_TSLA['Year'] = rownames(main_df_TSLA)
+main_df_AAPL['Quarter'] = quarters(as.Date(main_df_AAPL$Year))
+main_df_AAPL['Quarter'] = quarters(as.Date(main_df_AMZN$Year))
+main_df_AAPL['Quarter'] = quarters(as.Date(main_df_TSLA$Year))
 main_df_AAPL['Year'] = apply(main_df_AAPL['Year'],1,get_year)
 main_df_AMZN['Year'] = apply(main_df_AMZN['Year'],1,get_year)
 main_df_TSLA['Year'] = apply(main_df_TSLA['Year'],1,get_year)
@@ -100,6 +113,12 @@ main_df_TSLA['Month'] = rownames(main_df_TSLA)
 main_df_AAPL['Month'] = apply(main_df_AAPL['Month'],1,get_year_month)
 main_df_AMZN['Month'] = apply(main_df_AMZN['Month'],1,get_year_month)
 main_df_TSLA['Month'] = apply(main_df_TSLA['Month'],1,get_year_month)
+main_df_AAPL['Quarter'] = quarters(as.Date(main_df_AAPL$Year))
+main_df_AMZN['Quarter'] = quarters(as.Date(main_df_AMZN$Year))
+main_df_TSLA['Quarter'] = quarters(as.Date(main_df_TSLA$Year))
+main_df_AAPL['Quarter'] = paste(main_df_AAPL$Year,main_df_AAPL$Quarter,sep="-")
+main_df_AMZN['Quarter'] = paste(main_df_AMZN$Year,main_df_AMZN$Quarter,sep="-")
+main_df_TSLA['Quarter'] = paste(main_df_TSLA$Year,main_df_TSLA$Quarter,sep="-")
 
 # Financial ratios
 finratio.AAPL <- funddata.AAPL_new[,c(2,22,47,30)]
@@ -144,6 +163,7 @@ df_merge_AAPL <- merge(main_df_AAPL, finratio.AAPL, by = "Year")
 df_merge_AMZN <- merge(main_df_AMZN, finratio.AMZN, by = "Year",all.x = TRUE)
 df_merge_TSLA <- merge(main_df_TSLA, finratio.TSLA, by = "Year",all.x = TRUE)
 # merging economic data
+# merging oil data
 df_merge_AAPL <- merge(df_merge_AAPL,oil.prices, by = "Year",all.x = TRUE)
 df_merge_AMZN <- merge(df_merge_AMZN,oil.prices, by = "Year",all.x = TRUE)
 df_merge_TSLA <- merge(df_merge_TSLA,oil.prices, by = "Year",all.x = TRUE)
@@ -151,7 +171,10 @@ df_merge_TSLA <- merge(df_merge_TSLA,oil.prices, by = "Year",all.x = TRUE)
 df_merge_AAPL <- merge(df_merge_AAPL,unrate, by = "Month",all.x = TRUE)
 df_merge_AMZN <- merge(df_merge_AMZN,unrate, by = "Month",all.x = TRUE)
 df_merge_TSLA <- merge(df_merge_TSLA,unrate, by = "Month",all.x = TRUE)
-
+# merging percent change in GDP
+df_merge_AAPL <- merge(df_merge_AAPL,GDP, by = "Quarter",all.x = TRUE)
+df_merge_AMZN <- merge(df_merge_AMZN,GDP, by = "Quarter",all.x = TRUE)
+df_merge_TSLA <- merge(df_merge_TSLA,GDP, by = "Quarter",all.x = TRUE)
 
 # adding dates on index
 rownames(df_merge_AAPL) <- rownames(main_df_AAPL)
@@ -160,19 +183,12 @@ rownames(df_merge_TSLA) <- rownames(main_df_TSLA)
 
 
 # removing unnecessary columns
-df_merge_AAPL = head(within(df_merge_AAPL, rm("Year.x","Year.y","Month")))
-df_merge_AMZN = head(within(df_merge_AMZN, rm("Year.x","Year.y","Month")))
-df_merge_TSLA = head(within(df_merge_TSLA, rm("Year.x","Year.y","Month")))
+df_merge_AAPL = within(df_merge_AAPL, rm("Year.x","Year.y","Month","Quarter","GDP","DATE"))
+df_merge_AMZN = within(df_merge_AMZN, rm("Year.x","Year.y","Month","Quarter","GDP","DATE"))
+df_merge_TSLA = within(df_merge_TSLA, rm("Year.x","Year.y","Month","Quarter","GDP","DATE"))
 
-# clearing unwanted data
-rm("data.AAPL","data.GSPC","data.TSLA","finratio.AAPL","finratio.AMZN",
-   "finratio.TSLA","funddata.AAPL","funddata.AAPL_new","funddata.AMZN",
-   "funddata.AMZN_new","funddata.TSLA","funddata.TSLA_new","get_year",
-   "get_year_month","GSPC.ret","main_df_AAPL","main_df_AMZN","main_df_TSLA",      
-   "oil.prices","removex","TSLA.ret","unrate","UNRATE")
 
-write.csv(df_merge, 'df.merge.csv')
-
+#write.csv(df_merge, 'df.merge.csv')
 # Portfolio daily returns , assuming the portfolio stocks are weighted equally
 #PORTFOLIO.ret =  0.33*AMZN.ret + 0.33*AAPL.ret + 0.34*TSLA.ret
 #names(PORTFOLIO.ret) <- paste("PORFOLIO.ret")
@@ -197,12 +213,34 @@ write.csv(df_merge, 'df.merge.csv')
 ################################################################################
 
 
-
 # Add additional indicators (optional for now)
 # 1. Technical indicators,
 # 2. Momentum indicators
 # 3. ....
 
+# Simple moving average 
+sma20.AAPL<-SMA(data.AAPL$AAPL.Adjusted,n=20)
+sma20.AMZN<-SMA(data.AMZN$AMZN.Adjusted,n=20)
+sma20.TSLA<-SMA(data.TSLA$TSLA.Adjusted,n=20)
+
+# MACD
+macd.AAPL<-MACD(data.AAPL$AAPL.Adjusted, nFast = 12, nSlow = 26, nSig = 9, maType = SMA)
+macd.AMZN<-MACD(data.AAPL$AAPL.Adjusted, nFast = 12, nSlow = 26, nSig = 9, maType = SMA)
+macd.TSLA<-MACD(data.AAPL$AAPL.Adjusted, nFast = 12, nSlow = 26, nSig = 9, maType = SMA)
+
+# Merging TA indicators
+# Combine indicators with stock data 
+df_merge_AAPL<-data.frame(df_merge_AAPL,sma20.AAPL,macd.AAPL)
+df_merge_AMZN<-data.frame(df_merge_AMZN,sma20.AAPL,macd.AMZN)
+df_merge_TSLA<-data.frame(df_merge_TSLA,sma20.AAPL,macd.TSLA)
+
+# clearing unwanted data
+rm("data.AAPL","data.GSPC","data.TSLA","finratio.AAPL","finratio.AMZN",
+   "finratio.TSLA","funddata.AAPL","funddata.AAPL_new","funddata.AMZN",
+   "funddata.AMZN_new","funddata.TSLA","funddata.TSLA_new","get_year",
+   "get_year_month","GSPC.ret","main_df_AAPL","main_df_AMZN","main_df_TSLA",      
+   "oil.prices","removex","TSLA.ret","unrate","UNRATE","GDP","AAPL.ret",
+   "AMZN.ret","data.AMZN")
 
 # Factor Model
 # 1. Run linear regression on factors

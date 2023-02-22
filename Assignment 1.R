@@ -6,10 +6,6 @@ setwd("~/Desktop/Fintech-Constructing-a-Alpha-Model")
 library("TTR");
 library(quantmod);
 
-
-
-
-
 ################################################################################
 #################################### Data ######################################
 ################################################################################
@@ -20,12 +16,25 @@ library(quantmod);
 # 5. S&P500 index data          (done)
 # 6. Technical indicator data 
 
-
-
 # Storing daily OHLCV data of the stock portfolio
 data.AMZN <- getSymbols("AMZN",from="2010-12-31",to="2020-12-31",auto.assign=FALSE)
 data.AAPL <- getSymbols("AAPL",from="2010-12-31",to="2020-12-31",auto.assign=FALSE)
 data.TSLA <- getSymbols("TSLA",from="2010-12-31",to="2020-12-31",auto.assign=FALSE)
+
+# Fundamental Data and Financial Ratios
+funddata.AAPL <- read.csv( "Data/FundamentalData/appl_fin_ratios.csv", header = TRUE)
+funddata.AAPL_new <- t(funddata.AAPL)
+funddata.AMZN <- read.csv( "Data/FundamentalData/appl_fin_ratios.csv", header = TRUE)
+funddata.AMZN_new <- t(funddata.AMZN)
+funddata.TSLA <- read.csv( "Data/FundamentalData/appl_fin_ratios.csv", header = TRUE)
+funddata.TSLA_new <- t(funddata.TSLA)
+
+# Economic Data
+oil.prices <- read.csv( "Data/EconomicData/crude-oil-prices.csv", header = TRUE)
+# removing un-necessary columns
+oil.prices = oil.prices[,-1]
+oil.prices = oil.prices[,-1]
+names(oil.prices) <- c('Year','Oil Price')
 
 # Calculating daily returns % of each stock in the portfolio
 AMZN.ret <- Delt(data.AMZN$AMZN.Adjusted)
@@ -37,33 +46,31 @@ names(AMZN.ret) <- paste("AMZN.ret")
 names(AAPL.ret) <- paste("AAPL.ret")
 names(TSLA.ret) <- paste("TSLA.ret")
 
-# Portfolio daily returns , assuming the portfolio stocks are weighted equally
-PORTFOLIO.ret =  0.33*AMZN.ret + 0.33*AAPL.ret + 0.34*TSLA.ret
-names(PORTFOLIO.ret) <- paste("PORFOLIO.ret")
 
 # Calculating S&P500 daily returns
 data.GSPC <- getSymbols("^GSPC",from="2010-12-31",to="2020-12-31",auto.assign=FALSE)
 GSPC.ret <- Delt(data.GSPC$GSPC.Adjusted)
 names(GSPC.ret) <- paste("GSPC.ret")
 
-# main_df
-main_df = cbind(PORTFOLIO.ret,GSPC.ret)
+# main_df for each stock
+main_df_AAPL = cbind(AAPL.ret,GSPC.ret)
+main_df_AMZN = cbind(AMZN.ret,GSPC.ret)
+main_df_TSLA = cbind(TSLA.ret,GSPC.ret)
+
 # adding the year column
-
-main_df = as.data.frame(main_df)
-main_df['Year'] = rownames(main_df)
+main_df_AAPL = as.data.frame(main_df_AAPL)
+main_df_AMZN = as.data.frame(main_df_AMZN)
+main_df_TSLA = as.data.frame(main_df_TSLA)
+main_df_AAPL <- na.omit(main_df_AAPL)
+main_df_AMZN <- na.omit(main_df_AMZN)
+main_df_TSLA <- na.omit(main_df_TSLA)
+main_df_AAPL['Year'] = rownames(main_df_AAPL)
+main_df_AMZN['Year'] = rownames(main_df_AMZN)
+main_df_TSLA['Year'] = rownames(main_df_TSLA)
 get_year <- function(x) strsplit(x,'-')[[1]][1]
-main_df['Year'] = apply(main_df['Year'],1,get_year)
-main_df <- na.omit(main_df)
-
-
-# Fundamental Data and Financial Ratios
-funddata.AAPL <- read.csv( "Data/FundamentalData/appl_fin_ratios.csv", header = TRUE)
-funddata.AAPL_new <- t(funddata.AAPL)
-funddata.AMZN <- read.csv( "Data/FundamentalData/appl_fin_ratios.csv", header = TRUE)
-funddata.AMZN_new <- t(funddata.AMZN)
-funddata.TSLA <- read.csv( "Data/FundamentalData/appl_fin_ratios.csv", header = TRUE)
-funddata.TSLA_new <- t(funddata.TSLA)
+main_df_AAPL['Year'] = apply(main_df_AAPL['Year'],1,get_year)
+main_df_AMZN['Year'] = apply(main_df_AMZN['Year'],1,get_year)
+main_df_TSLA['Year'] = apply(main_df_TSLA['Year'],1,get_year)
 
 # Financial ratios
 finratio.AAPL <- funddata.AAPL_new[,c(2,22,47,30)]
@@ -103,28 +110,34 @@ finratio.TSLA['Year'] = apply(finratio.TSLA['Year'],1,get_year)
 
 
 # merging all data frames
-df_merge <- merge(main_df, finratio.AAPL, by = "Year",all.x = TRUE)
-df_merge <- merge(df_merge, finratio.AMZN, by = "Year",all.x = TRUE)
-df_merge <- merge(df_merge, finratio.TSLA, by = "Year",all.x = TRUE)
+# merging fundamental data
+df_merge_AAPL <- merge(main_df_AAPL, finratio.AAPL, by = "Year",all.x = TRUE)
+df_merge_AMZN <- merge(main_df_AMZN, finratio.AMZN, by = "Year",all.x = TRUE)
+df_merge_TSLA <- merge(main_df_TSLA, finratio.TSLA, by = "Year",all.x = TRUE)
+# merging economic data
+df_merge_AAPL <- merge(df_merge_AAPL,oil.prices, by = "Year",all.x = TRUE)
+df_merge_AMZN <- merge(df_merge_AMZN,oil.prices, by = "Year",all.x = TRUE)
+df_merge_TSLA <- merge(df_merge_TSLA,oil.prices, by = "Year",all.x = TRUE)
+
 
 write.csv(df_merge, 'df.merge.csv')
 
-
-
-
+# Portfolio daily returns , assuming the portfolio stocks are weighted equally
+#PORTFOLIO.ret =  0.33*AMZN.ret + 0.33*AAPL.ret + 0.34*TSLA.ret
+#names(PORTFOLIO.ret) <- paste("PORFOLIO.ret")
 ##### plots
 ##### scatter plot between portfolio and sp500
 #apple_returns = as.vector(c(AAPL.logret$AAPL.Adjusted))
 #sp500_returns = as.vector(c(AAPL.logret$AAPL.Adjusted))
-
 # adding scatter plot
 #plot(apple_returns, sp500_returns, main="Scatterplot Example",
 #     xlab="SP500 returns ", ylab="APP returns ", pch=19)
 
 
-
-
-
+# for each stock            (x)--->
+#index , stock.returns(y)* , (fun1, fun2, fun3, fun4)*, [year,eco1, eco2, eco3], (ta1, ta2, ta3), [sp500]*, (sentimentdata)
+#() - different
+#[] - same
 ################################################################################
 ############################## Data Manipulation ###############################
 ################################################################################

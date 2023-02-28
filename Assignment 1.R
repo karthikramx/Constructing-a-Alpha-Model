@@ -23,10 +23,7 @@ start.date <- "2011-01-01"; end.date <- "2021-12-31"
 # 5. S&P500 index data          (done)
 # 6. Technical indicator data 
 
-# Storing daily OHLCV data of the stock portfolio
-data.AMZN <- getSymbols("AMZN",from=start.date,to=end.date,auto.assign=FALSE)
-data.AAPL <- getSymbols("AAPL",from=start.date,to=end.date,auto.assign=FALSE)
-data.TSLA <- getSymbols("TSLA",from=start.date,to=end.date,auto.assign=FALSE)
+d
 
 # Fundamental Data and Financial Ratios
 funddata.AAPL <- read.csv( "Data/FundamentalData/appl_fin_ratios.csv", header = TRUE)
@@ -113,9 +110,6 @@ main_df_TSLA['Month'] = rownames(main_df_TSLA)
 main_df_AAPL['Month'] = apply(main_df_AAPL['Month'],1,get_year_month)
 main_df_AMZN['Month'] = apply(main_df_AMZN['Month'],1,get_year_month)
 main_df_TSLA['Month'] = apply(main_df_TSLA['Month'],1,get_year_month)
-main_df_AAPL['Quarter'] = quarters(as.Date(main_df_AAPL$Year))
-main_df_AMZN['Quarter'] = quarters(as.Date(main_df_AMZN$Year))
-main_df_TSLA['Quarter'] = quarters(as.Date(main_df_TSLA$Year))
 main_df_AAPL['Quarter'] = paste(main_df_AAPL$Year,main_df_AAPL$Quarter,sep="-")
 main_df_AMZN['Quarter'] = paste(main_df_AMZN$Year,main_df_AMZN$Quarter,sep="-")
 main_df_TSLA['Quarter'] = paste(main_df_TSLA$Year,main_df_TSLA$Quarter,sep="-")
@@ -219,7 +213,7 @@ df_merge_TSLA = within(df_merge_TSLA, rm("Year.x","Year.y","Month","Quarter","GD
 # 3. ....
 
 # Simple moving average 
-sma20.AAPL<-SMA(data.AAPL$AAPL.Adjusted,n=20)
+sma20.AAPL<-SMA(data.AAPL$AAPL.Adjusted,n=20) 
 sma20.AMZN<-SMA(data.AMZN$AMZN.Adjusted,n=20)
 sma20.TSLA<-SMA(data.TSLA$TSLA.Adjusted,n=20)
 
@@ -230,17 +224,28 @@ macd.TSLA<-MACD(data.AAPL$AAPL.Adjusted, nFast = 12, nSlow = 26, nSig = 9, maTyp
 
 # Merging TA indicators
 # Combine indicators with stock data 
-df_merge_AAPL<-data.frame(df_merge_AAPL,sma20.AAPL,macd.AAPL)
-df_merge_AMZN<-data.frame(df_merge_AMZN,sma20.AAPL,macd.AMZN)
-df_merge_TSLA<-data.frame(df_merge_TSLA,sma20.AAPL,macd.TSLA)
+# AAPL
+ta_AAPL <- as.data.frame(merge(sma20.AAPL, macd.AAPL))
+ta_AAPL['date'] <- rownames(ta_AAPL)
+df_merge_AAPL['date'] <- rownames(df_merge_AAPL)
+df_merge_AAPL = data.frame(merge(df_merge_AAPL,ta_AAPL, by = "date",all.x = TRUE))
+df_merge_AAPL['stock'] = 'AAPL'
 
-# clearing unwanted data
-rm("data.AAPL","data.GSPC","data.TSLA","finratio.AAPL","finratio.AMZN",
-   "finratio.TSLA","funddata.AAPL","funddata.AAPL_new","funddata.AMZN",
-   "funddata.AMZN_new","funddata.TSLA","funddata.TSLA_new","get_year",
-   "get_year_month","GSPC.ret","main_df_AAPL","main_df_AMZN","main_df_TSLA",      
-   "oil.prices","removex","TSLA.ret","unrate","UNRATE","GDP","AAPL.ret",
-   "AMZN.ret","data.AMZN")
+# AMZN
+ta_AMZN <- as.data.frame(merge(sma20.AMZN, macd.AMZN))
+ta_AMZN['date'] <- rownames(ta_AMZN)
+df_merge_AMZN['date'] <- rownames(df_merge_AMZN)
+df_merge_AMZN = data.frame(merge(df_merge_AMZN,ta_AMZN, by = "date",all.x = TRUE))
+df_merge_AAPL['stock'] = 'AMZN'
+
+# TSLA
+ta_TSLA <- as.data.frame(merge(sma20.TSLA, macd.TSLA))
+ta_TSLA['date'] <- rownames(ta_TSLA)
+df_merge_TSLA['date'] <- rownames(df_merge_TSLA)
+df_merge_TSLA = data.frame(merge(df_merge_TSLA,ta_TSLA, by = "date",all.x = TRUE))
+df_merge_AAPL['stock'] = 'TSLA'
+
+panel_data = rbind(df_merge_AAPL,df_merge_AMZN,df_merge_TSLA)
 
 # Factor Model
 # 1. Run linear regression on factors
